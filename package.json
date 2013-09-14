@@ -1,0 +1,8 @@
+{
+  "name": "spoondollar_bookkeeper",
+  "fullName": "Spoondollar Bookkeeper",
+  "id": "jid1-iCIMXqpB61IG0Q",
+  "description": "Adds a table to the Spoonflower Spoondollars page which aggregates your fabric sale information",
+  "author": "Amanda Helman",
+  "version": "0.1"
+}

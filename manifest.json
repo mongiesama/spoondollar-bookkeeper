@@ -1,0 +1,15 @@
+{
+  "manifest_version": 2,
+
+  "name": "Spoondollar Bookkeeper",
+  "description": "Adds a table to the Spoonflower Spoondollars page which aggregates your fabric sale information",
+  "version": "0.1",
+  "author": "Amanda Helman",
+
+  "content_scripts": [
+    {
+      "matches": ["http://www.spoonflower.com/account/*?sub_action=spoondollars"],
+      "js": ["data/jquery-1.10.2.js", "data/jquery.sortElements.js", "data/bookkeeper.js"]
+    }
+  ]
+}
