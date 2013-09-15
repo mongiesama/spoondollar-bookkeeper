@@ -1,6 +1,7 @@
 var bookkeeper = function() {
 
     var descriptionRegex = /Sale: ([0-9]+) x ([\w ]+?) of design '((?:(?! ' on ).)+)' on ([\w \-\xae]+?) fabric to ([\w\-]+)/i;
+    var bundleDescriptionRegex = /Sale: ([\w ]+?) (fat quarter) bundle of design '((?:(?! ' on ).)+)' on ([\w \-\xae]+?) fabric to ([\w\-]+)/i;
     var yardageRegex = /([0-9]+) yards?/;
 
     var orderDiv = $('#orders');
@@ -52,12 +53,18 @@ var bookkeeper = function() {
     function parseFabricSale(description, money) {
         var infoContents = descriptionRegex.exec(description);
         //console.log("parsed description: " + infoContents);
+        var bundle = false;
         if (!infoContents) {
-            console.log("Unable to parse description: " + description);
-            return;
+            infoContents = bundleDescriptionRegex.exec(description);
+            //console.log("parsed bundle description: " + infoContents);
+            if (!infoContents) {
+                console.log("Unable to parse description: " + description);
+                return;
+            }
+            bundle = true;
         }
         matchCount++;
-        var quantity = infoContents[1];
+        var quantity = bundle ? 1 : infoContents[1];
         var size = infoContents[2];
         var design = infoContents[3];
         var substrate = infoContents[4];
@@ -163,11 +170,6 @@ var bookkeeper = function() {
     function byRevenue(a, b) {
         if (a.cents == b.cents) return byName(a, b);
         return b.cents - a.cents;
-    }
-
-    function bySales(a, b) {
-        if (a.sales == b.sales) return byName(a, b);
-        return b.sales - a.sales;
     }
 
     function byName(a, b) {
