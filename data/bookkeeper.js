@@ -125,6 +125,7 @@ var bookkeeper = function() {
         fabricData.swatches = 0;
         fabricData.fqs = 0;
         fabricData.yards = 0;
+        fabricData.rolls = 0;
         fabricData.sqin = 0;
         return fabricData;
     }
@@ -147,6 +148,9 @@ var bookkeeper = function() {
             } else if (sale.size.match(/swatch/i)) {
                 fabricData.swatches += sale.quantity;
                 fabricData.sqin += sale.quantity * 8 * 8;
+            } else  if (sale.size.match(/roll/i)) {
+                fabricData.rolls += sale.quantity;
+                fabricData.sqin += 26 * 72;
             } else {
                 console.log("unable to process size described as '" + sale.size + "'");
             }
@@ -164,6 +168,7 @@ var bookkeeper = function() {
         aggregateFabricData.swatches += fabricData.swatches;
         aggregateFabricData.fqs += fabricData.fqs;
         aggregateFabricData.yards += fabricData.yards;
+        aggregateFabricData.rolls += fabricData.rolls;
         aggregateFabricData.sqin += fabricData.sqin;
     }
 
@@ -182,20 +187,25 @@ var bookkeeper = function() {
         if (fabricList.length < 1) {
             return;
         }
-        var tableHeader = "<tr><th>Design Name</th>"
+        var tableHeader = "<tr>"
+            + "<th>Design Name</th>"
             + "<th id='revenue_header'>Total Revenue</th>"
             + "<th id='sales_header'>Total Sales</th>"
             + "<th id='sqft_header'>Total Square Feet</th>"
             + "<th>Yards</th>"
             + "<th>Fat Quarters</th>"
-            + "<th>Swatches</th></tr>";
+            + "<th>Swatches</th>"
+            + "<th>Gift Wrap Rolls</th>"
+            + "</tr>";
         var aggregateRow = "<tr><th></th><th>"
             + formatMoney(aggregateFabricData.cents) + "</th><th>"
             + aggregateFabricData.sales + "</th><th>"
             + formatSqft(aggregateFabricData.sqin) + "</th><th>"
             + aggregateFabricData.yards + "</th><th>"
             + aggregateFabricData.fqs + "</th><th>"
-            + aggregateFabricData.swatches + "</th></tr>";
+            + aggregateFabricData.swatches + "</th><th>"
+            + aggregateFabricData.rolls + "</th>"
+            + "</tr>";
         orderDiv.after('<hr/><h2>Top Sellers</h2><div><table id=sales>' + tableHeader + aggregateRow + '</table></div>');
         addDataRows();
 
@@ -208,7 +218,7 @@ var bookkeeper = function() {
                 var thIndex = th.index();
                 th.click(function() {
                     table.find('td').filter(function() {
-                        return $(this).index() === (thIndex + 6);
+                        return $(this).index() === (thIndex + 7);
                     }).sortElements(sortHiddenRow,
                         function() {
                             // parentNode is the element we want to move
@@ -254,6 +264,7 @@ var bookkeeper = function() {
                 + '</td><td>' + fabric.yards
                 + '</td><td>' + fabric.fqs
                 + '</td><td>' + fabric.swatches
+                + '</td><td>' + fabric.rolls
                 + '</td><td style="display:none;">' + fabric.name + '___' + fabric.cents
                 + '</td><td style="display:none;">' + fabric.name + '___' + fabric.sales
                 + '</td><td style="display:none;">' + fabric.name + '___' + fabric.sqin
