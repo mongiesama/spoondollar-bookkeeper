@@ -3,6 +3,7 @@ var bookkeeper = function() {
     var descriptionRegex = /Sale: ([0-9]+) x ([\w ]+?) of design '((?:(?! ' on ).)+)' on ([\w \-\xae]+?) fabric to ([\w\-]+)/i;
     var bundleDescriptionRegex = /Sale: ([\w ]+?) (fat quarter) bundle of design '((?:(?! ' on ).)+)' on ([\w \-\xae]+?) fabric to ([\w\-]+)/i;
     var yardageRegex = /([0-9]+) yards?/;
+    var footageRegex = /([0-9]+) (?:feet|foot)/;
 
     var orderDiv = $('#orders');
     var parsedData = [];
@@ -59,7 +60,7 @@ var bookkeeper = function() {
             //console.log("parsed bundle description: " + infoContents);
             if (!infoContents) {
                 console.log("Unable to parse description: " + description);
-                return;
+                return null;
             }
             bundle = true;
         }
@@ -80,14 +81,21 @@ var bookkeeper = function() {
         rowData.substrate = substrate;
         rowData.customer = customer;
         parsedData.push(rowData);
+        return rowData;
     }
 
     function parseSize(size, rowData) {
         rowData.size = size;
         var sizeContents = yardageRegex.exec(size);
         rowData.isYardage = false;
+        rowData.isFootage = false;
         if (sizeContents) {
             rowData.isYardage = true;
+            rowData.size = sizeContents[1];
+        }
+        sizeContents = footageRegex.exec(size);
+        if (sizeContents) {
+            rowData.isFootage = true;
             rowData.size = sizeContents[1];
         }
     }
@@ -123,9 +131,15 @@ var bookkeeper = function() {
         fabricData.sales = 0;
         fabricData.cents = 0;
         fabricData.swatches = 0;
+        fabricData.wall_swatches = 0;
         fabricData.fqs = 0;
         fabricData.yards = 0;
-        fabricData.rolls = 0;
+        fabricData.wrap_rolls = 0;
+        fabricData.wall_rolls = 0;
+        fabricData.feet = 0;
+        fabricData.small = 0;
+        fabricData.medium = 0;
+        fabricData.large = 0;
         fabricData.sqin = 0;
         return fabricData;
     }
@@ -138,7 +152,12 @@ var bookkeeper = function() {
             if (!fabricData) fabricData = initFabricData(sale.design);
             fabricData.sales++;
             fabricData.cents += sale.money.cents + (100 * sale.money.dollars);
-            if (sale.isYardage) {
+            var isWallpaper = sale.substrate.match(/wallpaper/i);
+            if (sale.isFootage) {
+                var totalFeet = sale.quantity * parseInt(sale.size);
+                fabricData.feet += totalFeet;
+                fabricData.sqin += totalFeet * 12 * 24;
+            } else if (sale.isYardage) {
                 var totalYards = sale.quantity * parseInt(sale.size);
                 fabricData.yards += totalYards;
                 fabricData.sqin += totalYards * 36 * width(sale.substrate);
@@ -146,11 +165,31 @@ var bookkeeper = function() {
                 fabricData.fqs += sale.quantity;
                 fabricData.sqin += sale.quantity * 18 * width(sale.substrate)/2;
             } else if (sale.size.match(/swatch/i)) {
-                fabricData.swatches += sale.quantity;
-                fabricData.sqin += sale.quantity * 8 * 8;
-            } else  if (sale.size.match(/roll/i)) {
-                fabricData.rolls += sale.quantity;
-                fabricData.sqin += 26 * 72;
+                if (isWallpaper) {
+                    fabricData.wall_swatches += sale.quantity;
+                    fabricData.sqin += sale.quantity * 24 * 12;
+                } else {
+                    fabricData.swatches += sale.quantity;
+                    fabricData.sqin += sale.quantity * 8 * 8;
+                }
+            } else if (sale.size.match(/roll/i)) {
+                if (isWallpaper) {
+                    fabricData.wall_rolls += sale.quantity;
+                    fabricData.feet += sale.quantity * 12;
+                    fabricData.sqin += sale.quantity * 24 * 144;
+                } else {
+                    fabricData.wrap_rolls += sale.quantity;
+                    fabricData.sqin += sale.quantity * 26 * 72;
+                }
+            } else if (sale.size.match(/small/i)) {
+                fabricData.small += sale.quantity;
+                fabricData.sqin += sale.quantity * 5 * 5;
+            } else if (sale.size.match(/medium/i)) {
+                fabricData.medium += sale.quantity;
+                fabricData.sqin += sale.quantity * 15 * 15;
+            } else if (sale.size.match(/large/i)) {
+                fabricData.large += sale.quantity;
+                fabricData.sqin += sale.quantity * 30 * 30;
             } else {
                 console.log("unable to process size described as '" + sale.size + "'");
             }
@@ -166,9 +205,15 @@ var bookkeeper = function() {
         aggregateFabricData.sales += fabricData.sales;
         aggregateFabricData.cents += fabricData.cents;
         aggregateFabricData.swatches += fabricData.swatches;
+        aggregateFabricData.wall_swatches += fabricData.wall_swatches;
         aggregateFabricData.fqs += fabricData.fqs;
         aggregateFabricData.yards += fabricData.yards;
-        aggregateFabricData.rolls += fabricData.rolls;
+        aggregateFabricData.wrap_rolls += fabricData.wrap_rolls;
+        aggregateFabricData.wall_rolls += fabricData.wall_rolls;
+        aggregateFabricData.feet += fabricData.feet;
+        aggregateFabricData.small += fabricData.small;
+        aggregateFabricData.medium += fabricData.medium;
+        aggregateFabricData.large += fabricData.large;
         aggregateFabricData.sqin += fabricData.sqin;
     }
 
@@ -196,16 +241,25 @@ var bookkeeper = function() {
             + "<th>Fat Quarters</th>"
             + "<th>Swatches</th>"
             + "<th>Gift Wrap Rolls</th>"
+            + "<th>Small Decals</th>"
+            + "<th>Medium Decals</th>"
+            + "<th>Large Decals</th>"
+            + "<th>Wallpaper Feet</th>"
+            + "<th>Wallpaper Swatches</th>"
             + "</tr>";
-        var aggregateRow = "<tr><th></th><th>"
-            + formatMoney(aggregateFabricData.cents) + "</th><th>"
-            + aggregateFabricData.sales + "</th><th>"
-            + formatSqft(aggregateFabricData.sqin) + "</th><th>"
-            + aggregateFabricData.yards + "</th><th>"
-            + aggregateFabricData.fqs + "</th><th>"
-            + aggregateFabricData.swatches + "</th><th>"
-            + aggregateFabricData.rolls + "</th>"
-            + "</tr>";
+        var aggregateRow = "<tr><th></th><th>" + formatMoney(aggregateFabricData.cents)
+            + "</th><th>" + aggregateFabricData.sales
+            + "</th><th>" + formatSqft(aggregateFabricData.sqin)
+            + "</th><th>" + aggregateFabricData.yards
+            + "</th><th>" + aggregateFabricData.fqs
+            + "</th><th>" + aggregateFabricData.swatches
+            + "</th><th>" + aggregateFabricData.wrap_rolls
+            + "</th><th>" + aggregateFabricData.small
+            + "</th><th>" + aggregateFabricData.medium
+            + "</th><th>" + aggregateFabricData.large
+            + "</th><th>" + aggregateFabricData.feet
+            + "</th><th>" + aggregateFabricData.wall_swatches
+            + "</th></tr>";
         orderDiv.after('<hr/><h2>Top Sellers</h2><div><table id=sales>' + tableHeader + aggregateRow + '</table></div>');
         addDataRows();
 
@@ -218,7 +272,7 @@ var bookkeeper = function() {
                 var thIndex = th.index();
                 th.click(function() {
                     table.find('td').filter(function() {
-                        return $(this).index() === (thIndex + 7);
+                        return $(this).index() === (thIndex + 12);
                     }).sortElements(sortHiddenRow,
                         function() {
                             // parentNode is the element we want to move
@@ -264,7 +318,12 @@ var bookkeeper = function() {
                 + '</td><td>' + fabric.yards
                 + '</td><td>' + fabric.fqs
                 + '</td><td>' + fabric.swatches
-                + '</td><td>' + fabric.rolls
+                + '</td><td>' + fabric.wrap_rolls
+                + '</td><td>' + fabric.small
+                + '</td><td>' + fabric.medium
+                + '</td><td>' + fabric.large
+                + '</td><td>' + fabric.feet
+                + '</td><td>' + fabric.wall_swatches
                 + '</td><td style="display:none;">' + fabric.name + '___' + fabric.cents
                 + '</td><td style="display:none;">' + fabric.name + '___' + fabric.sales
                 + '</td><td style="display:none;">' + fabric.name + '___' + fabric.sqin
