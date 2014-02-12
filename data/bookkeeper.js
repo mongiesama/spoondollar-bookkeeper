@@ -1,11 +1,11 @@
 var bookkeeper = function() {
 
-    var descriptionRegex = /Sale: ([0-9]+) x ([\w ]+?) of design '((?:(?! ' on ).)+)' on ([\w \-\xae]+?) fabric to ([\w\-]+)/i;
-    var bundleDescriptionRegex = /Sale: ([\w ]+?) (fat quarter) bundle of design '((?:(?! ' on ).)+)' on ([\w \-\xae]+?) fabric to ([\w\-]+)/i;
+    var descriptionRegex = /Sale: ([0-9]+) x ([\w ]+?) of design '((?:(?! ' on ).)+)' on ([\w \-\xae]+?) to ([\w\-]+)/i;
+    var bundleDescriptionRegex = /Sale: ([\w ]+?) (fat quarter) bundle of design '((?:(?! ' on ).)+)' on ([\w \-\xae]+?) to ([\w\-]+)/i;
     var yardageRegex = /([0-9]+) yards?/;
     var footageRegex = /([0-9]+) (?:feet|foot)/;
 
-    var orderDiv = $('#orders');
+    var orderDiv = $('#spoondollar_history');
     var parsedData = [];
     var fabricList = [];
     var aggregateFabricData = initFabricData("Overall");
@@ -13,22 +13,33 @@ var bookkeeper = function() {
     var debitCount = 0;
     var matchCount = 0;
 
-    if (document.URL.match(/.*www.spoonflower.com\/account\/\d*\?sub_action=spoondollars/)) {
-        console.log("starting bookkeeper");
-        grabAllTransactions();
-        //console.log("read in: " + JSON.stringify(parsedData));
-        console.log("found " + creditCount + " credits, " + debitCount + " debits, "
-            + matchCount + " matches, and " + parsedData.length + " rows");
-        runReports();
-        //console.log("aggregate fabric data: " + JSON.stringify(fabricList.sort(byRevenue)));
-        fabricList.sort(byRevenue);
-        console.log("adding table of " + fabricList.length + " entries to page");
-        addToPage();
+    $(document).ready(function() {
+        setTimeout(bookkeeper, 1000);
+    });
+
+    $("#hist_search").click(function() {
+        removeFromPage();
+        setTimeout(bookkeeper, 10000);
+    });
+
+    function bookkeeper() {
+        if (document.URL.match(/.*www.spoonflower.com\/account\/\d*\?sub_action=spoondollars/)) {
+            console.log("starting bookkeeper");
+            grabAllTransactions();
+            //console.log("read in: " + JSON.stringify(parsedData));
+            console.log("found " + creditCount + " credits, " + debitCount + " debits, "
+                + matchCount + " matches, and " + parsedData.length + " rows");
+            runReports();
+            //console.log("aggregate fabric data: " + JSON.stringify(fabricList.sort(byRevenue)));
+            fabricList.sort(byRevenue);
+            console.log("adding table of " + fabricList.length + " entries to page");
+            addToPage();
+        }
     }
 
     function grabAllTransactions() {
         orderDiv.find('tr').each(function() {
-            var type = $(this).find('td:eq(1)').html();
+            var type = $(this).find('td:eq(2)').html();
             var isSale = false;
             var isValid = false;
             if (type && type.match(/credit/i)) {
@@ -41,8 +52,8 @@ var bookkeeper = function() {
             }
             if (isValid) {
                 //var date = $(this).find('td:eq(0)').html();
-                var description = $(this).find('td:eq(2)').html();
-                var money = $(this).find('td:eq(3)').html();
+                var description = $(this).find('td:eq(3)').html();
+                var money = $(this).find('td:eq(4)').html();
                 //var balance = $(this).find('td:eq(4)').html();
                 if (isSale) {
                     parseFabricSale(description, money);
@@ -117,11 +128,11 @@ var bookkeeper = function() {
     }
 
     function width(substrate) {
-        if (substrate.match(/performance|twill/)) return 58;
-        if (substrate.match(/knit|sateen/)) return 56;
-        if (substrate.match(/canvas|voile/)) return 54;
-        if (substrate.match(/crepe/)) return 42;
-        if (substrate.match(/silk/)) return 40;
+        if (substrate.match(/twill/i)) return 58;
+        if (substrate.match(/knit|sateen/i)) return 56;
+        if (substrate.match(/canvas|voile|faille/i)) return 54;
+        if (substrate.match(/crepe/i)) return 42;
+        if (substrate.match(/silk/i)) return 40;
         return 42;
     }
 
@@ -228,6 +239,16 @@ var bookkeeper = function() {
         return 0;
     }
 
+    function removeFromPage() {
+        $("#bookkeeper_data").remove();
+        parsedData = [];
+        fabricList = [];
+        aggregateFabricData = initFabricData("Overall");
+        creditCount = 0;
+        debitCount = 0;
+        matchCount = 0;
+    }
+
     function addToPage() {
         if (fabricList.length < 1) {
             return;
@@ -260,7 +281,7 @@ var bookkeeper = function() {
             + "</th><th>" + aggregateFabricData.feet
             + "</th><th>" + aggregateFabricData.wall_swatches
             + "</th></tr>";
-        orderDiv.after('<hr/><h2>Top Sellers</h2><div><table id=sales>' + tableHeader + aggregateRow + '</table></div>');
+        orderDiv.after('<div id="bookkeeper_data"><hr/><h2>Top Sellers</h2><table id="sales">' + tableHeader + aggregateRow + '</table></div>');
         addDataRows();
 
         var table = $('#sales');
